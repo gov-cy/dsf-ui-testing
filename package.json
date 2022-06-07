@@ -1,0 +1,21 @@
+{
+  "name": "dsf-ui-testing.git",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "DMRID - DSF Team",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {},
+  "keywords": [],
+  "dependencies": {
+    "@percy/cli": "^1.1.0",
+    "@percy/core": "^1.1.0",
+    "@percy/puppeteer": "^2.0.1",
+    "chai": "^4.3.6",
+    "lighthouse": "^9.5.0",
+    "open": "^8.4.0",
+    "pa11y": "^6.2.3",
+    "puppeteer": "^13.5.2"
+  }
+}
