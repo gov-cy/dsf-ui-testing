@@ -16,6 +16,8 @@ Navigate to your local copies folder though the command line and Run the followi
 
 This module groups some basic functions to perform client side tests using puppeteer and other packages such as lighthouse and pa11y.
 
+### Starting a test
+
 You can use it by using the import function as follows:
 
 ```js
@@ -31,10 +33,10 @@ let DSFTest = new DSFTesting();
 You can overwrite the default settings (before calling the `startTest` function) as follows :
 
 ```js
-DSFTest.puppeteerSettings = { headless: false, args: ['--ignore-certificate-errors'], slowMo: 0 };
+DSFTest.puppeteerSettings = { headless: true, args: ['--ignore-certificate-errors'], slowMo: 0 };
 DSFTest.isIncognito=false;
 DSFTest.pa11ySettings = {
-        standard: 'WCAG2AAA'
+        standard: 'WCAG2AA'
         ,wait: 10000
     };
 DSFTest.lighthouseFlowConfigContext = {
@@ -48,80 +50,64 @@ DSFTest.lighthouseFlowConfigContext = {
     };
 ```
 
-Finally to staty a test you must call the `startTest` function as follows:
+To start a test you must call the `startTest` function as follows:
 
 ```js
 // define <name of report> and <path where reports are saved>
 await DSFTest.startTest('Child birth Grand','reports/childBirthGrant/');
 ```
 
-### dsf-testing example
+Then you can tests using the pappeteer instance that has been created. 
+
+### DSF UI Tests
+
+A series of test are performed by the DSF to assure compliance with the design system and accessibility requirements. To perform these tests you can run `DSFStandardPageTest` .
+
+
+#### dsf-testing example
 
 ```js 
+
 import {DSFTesting} from './dsf-testing.mjs';
 
 (async () => {
     let DSFTest = new DSFTesting();
-    DSFTest.puppeteerSettings = { headless: false, args: ['--ignore-certificate-errors'], slowMo: 0 };
-    await DSFTest.startTest('Child birth Grand','reports/childBirthGrant/');
+    //DEBUG --- overwrite puppeteeer settings to headles browser false
+    DSFTest.puppeteerSettings = { headless: true, args: ['--ignore-certificate-errors',], slowMo: 0, };
+    await DSFTest.startTest('Mock service','reports/mock/');
 
     //-------------------- START TESTS -------------------------
-
-    console.log("********** root page ***");
+    let pageName = 'root';
     //go to page
-    await DSFTest.page.goto('https://child-birth-grant.staging.service.gov.cy/', { waitUntil: 'networkidle0', });
-    //await before run
-    await DSFTesting.timeout(10000);
-    //take screenshoot
-    await DSFTest.doScreenshot( 'root.png' ,1200);
-    //set view port (resolution)
-    await DSFTest.page.setViewport({ width: 1200, height: 2000, deviceScaleFactor: 1, });
-    //do pa11y
-    await DSFTest.doPa11y('root.pa11y.html');
-    //do lighthouse FLOW
-    await DSFTest.doLighthouseFlow( DSFTest.page.url());
-    
-    //set view port (resolution)
-    //sometimes needed to reach the element and click it (bigger height)
-    await DSFTest.page.setViewport({ width: 1200, height: 3000, deviceScaleFactor: 1, });
+    await DSFTest.page.goto('https://localhost:44319/?culture=el-GR', { waitUntil: 'networkidle0', });
+    //run the batch of tests and reports fo this page 
+    await DSFTest.DSFStandardPageTest(pageName,'el');
     //click
-    await DSFTest.page.click("button.govcy-btn-primary");
+    await DSFTest.page.click('button.govcy-btn-primary');
 
+    //-------------------------------------
     //await before run
-    await DSFTest.page.waitForNavigation(), // The promise resolves after navigation has finished
-    await DSFTest.page.waitForSelector("button.btn-primary");
-    console.log("********** CY Login ***");
-    //do lighthouse FLOW navidation
-    await DSFTest.doLighthouseNavStart("toStart");
+    await DSFTesting.timeout(5000);
+    //await DSFTest.page.waitForNavigation({waitUntil: 'networkidle2'}), // The promise resolves after navigation has finished
+    //await DSFTest.page.waitForSelector('button.btn-primary');
+    console.log('********** CY Login ***');
     //type
-    await DSFTest.page.focus("#username");
-    await DSFTest.page.type("#username","mlsi41", { delay: 100 });
+    await DSFTest.page.focus('#Input_Username');
+    await DSFTest.page.type('#Input_Username',process.env.CHILD_BIRTH_GRANT_USERNAME, { delay: 100 });
 
     //type
-    await DSFTest.page.focus("#password");
-    await DSFTest.page.type("#password","testing1!", { delay: 100 });
+    await DSFTest.page.focus('#Input_Password');
+    await DSFTest.page.type('#Input_Password',process.env.CHILD_BIRTH_GRANT_PASS, { delay: 100 });
 
     //click
-    await DSFTest.page.click("button.btn-primary");
-    
-    //do lighthouse FLOW navidation
-    await DSFTest.doLighthouseNavEnd();
+    await DSFTest.page.click('button.btn-primary');
 
-    //await before run
-    await DSFTesting.timeout(10000);
-    console.log("********** start  ***");
-    
-    //take screenshoot
-    await DSFTest.doScreenshot( 'start.png' ,1200);
-   
-    //do lighthouse FLOW
-    await DSFTest.doLighthouseFlow( DSFTest.page.url());
-
-    //do pa11y
-    await DSFTest.doPa11y('start.pa11y.html');
-
-    //FLOW report
-    await DSFTest.reportLighthouseFlow('report_small.html')
+    //-------------------------------------
+    pageName='AddressSelection';
+    //run the batch of tests and reports fo this page 
+    await DSFTest.DSFStandardPageTest(pageName,'el');
+        //generate the report
+    await DSFTest.generateReport();
     //close browser
     await DSFTest.endTest();
 })();
@@ -133,7 +119,7 @@ import {DSFTesting} from './dsf-testing.mjs';
 You can find some examples we have been testing under the `\src\` folder. To run the examples use the `node` command as followes: 
 
 ```shell
-node .\src\childBirthGrantPuppetier.js   
+node .\src\mockPuppetier.js   
 ```
 
 All of the example scripts use some enviromental variables for test username and password used in the respected scenarios. Make sure you set the following:
@@ -205,3 +191,10 @@ cap['browserstack.accessKey'] = process.env.BROWSERSTACK_ACCESS_KEY || '<accessk
 ```
 
 You will need to get the username and access key from your account on Browserstack.
+
+## Todo
+
+- Add more tests
+- Add versions of checks
+- Run test on non DSF pages (proof of concept) 
+- Add linters (html, js, css)
