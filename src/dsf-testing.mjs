@@ -5,7 +5,7 @@ import puppeteer from 'puppeteer';
 import { startFlow } from 'lighthouse/lighthouse-core/fraggle-rock/api.js';
 import pa11y  from 'pa11y';
 import htmlReporter from 'pa11y/lib/reporters/html.js';
-import URL from 'url';
+//import {URL} from 'url';
 import fetch from 'node-fetch';
 import https from 'https';
 
@@ -86,8 +86,10 @@ export class DSFTesting {
      * @param {string} key A key for this test
      * @param {*} value The value returned by the test 
      * @param {boolean} condition The condition to test if true or false 
+     * @param {string} selector The html selector used in the test  
+     * @param {string} attribute The attribute used in the test  
      */
-    async addToReportJSON(page,type,key,value,condition=undefined) {
+    async addToReportJSON(page,type,key,value,condition=undefined,selector=undefined,attribute=undefined) {
         let pageObj = this.reportJSON.pages.find(x => x.id === page);
         //costruct check object
         let checkObj = {
@@ -99,7 +101,11 @@ export class DSFTesting {
             'isScreenshoot' : (type=='screenshoot'?true:false),
             'isPa11y' : (type=='pa11y.issues'?true:false),
             'hasCondition' : (condition===undefined?false:true),
-            'condition' : condition
+            'condition' : condition,
+            'hasSelector' : (selector===undefined?false:true),
+            'selector' : selector,
+            'hasAttribute' : (attribute===undefined?false:true),
+            'attribute' : attribute
         };
         //console.log(checkObj);
         //add to reportJSON for this page
@@ -199,10 +205,16 @@ export class DSFTesting {
                         {{/value}}
                     {{/isPa11y}}
                     {{#isText}}
-                        Value: <b>{{value}}</b>
+                        Value: <b>{{value}}</b><br>
                     {{/isText}}
+                    {{#hasSelector}}
+                    Selector: <b>{{selector}}</b><br>
+                    {{/hasSelector}}
+                    {{#hasAttribute}}
+                    Attribute: <b>{{attribute}}</b><br> 
+                    {{/hasAttribute}}
                     {{#hasCondition}}
-                    , Condition: <b class="{{#condition}}condition-true{{/condition}}{{^condition}}condition-false{{/condition}}">
+                    Condition: <b class="{{#condition}}condition-true{{/condition}}{{^condition}}condition-false{{/condition}}">
                     {{condition}}</b>
                     {{/hasCondition}}
                 </li>
@@ -262,7 +274,9 @@ export class DSFTesting {
                     console.log(testValue);
                     //add to report
                     await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
-                        await this.reportOptions.tests[key].condition(testValue,lang));
+                        await this.reportOptions.tests[key].condition(testValue,lang),
+                        this.reportOptions.tests[key].selector
+                        ,this.reportOptions.tests[key].attribute);
                 break;
                 case 'pageTitleTest':
                     testValue = await this.page.title();
@@ -274,14 +288,17 @@ export class DSFTesting {
                 case 'countElementsTest':
                     testValue = await this.page.$$(this.reportOptions.tests[key].selector);
                     await this.addToReportJSON(pageName,key,pageName+key,await testValue.length,
-                        await this.reportOptions.tests[key].condition(testValue,lang));
+                        await this.reportOptions.tests[key].condition(testValue,lang),
+                        this.reportOptions.tests[key].selector);
                 break;
                 case 'computedStyleTest':
                     testValue = await await this.getComputedStyle(this.reportOptions.tests[key].selector
                         ,this.reportOptions.tests[key].attribute);
                     if (testValue) {console.log(testValue);
                         await this.addToReportJSON(pageName,key,pageName+key,await testValue,
-                            await this.reportOptions.tests[key].condition(testValue,lang));
+                            await this.reportOptions.tests[key].condition(testValue,lang),
+                            this.reportOptions.tests[key].selector
+                            ,this.reportOptions.tests[key].attribute);
                     }
                 break;
                 case 'randomComputedStyleTest':
@@ -292,7 +309,9 @@ export class DSFTesting {
                         ,this.reportOptions.tests[key].attribute,hoverFlag,focusFlag);
                     if (testValue) {console.log(this.reportOptions.tests[key].selector + ' ' + testValue);
                         await this.addToReportJSON(pageName,key,pageName+key,await testValue,
-                            await this.reportOptions.tests[key].condition(testValue,lang));
+                            await this.reportOptions.tests[key].condition(testValue,lang),
+                            this.reportOptions.tests[key].selector
+                            ,this.reportOptions.tests[key].attribute);
                     }
                 break;
             }
@@ -316,15 +335,18 @@ export class DSFTesting {
     /**
      * Validates a URL is reachable 
      * 
-     * @param {string} urlString 
+     * @param {string} urlString the url path
+     * @param {boolean} isRelative if the path is relative or not
      * @returns true if page is accessible or false if not
      */
-    async validateUrl(urlString) {
+    async validateUrl(urlString,isRelative=false) {
         try {
             const agent = new https.Agent({
                 rejectUnauthorized: false
               })
-            const response = await fetch(urlString, { agent });
+            const urlPath = (isRelative?new URL(urlString, this.page.url()).href:urlString);
+            //console.log('---------' + urlPath);
+            const response = await fetch(urlPath, { agent });
             //console.log('status code: ', response.status); // 👉️ 200
             if (!response.ok) {return false} else {return true;}
         } catch (err) {console.log(err.message);return false;}
@@ -745,14 +767,14 @@ export class DSFTesting {
                 'attribute':'content',
                 'testType' : 'elementAttributeTest',
                 'onError' : false,
-                'condition':async (value,lang) => {return await this.validateUrl(value)}
+                'condition':async (value,lang) => {return await this.validateUrl(value,true)}
             }
             ,'4.3.5.meta.twitter:image.exists': {
                 'selector': 'head > meta[property="twitter:image"]',
                 'attribute':'content',
                 'testType' : 'elementAttributeTest',
                 'onError' : false,
-                'condition':async (value,lang) => {return await this.validateUrl(value)}
+                'condition':async (value,lang) => {return await this.validateUrl(value,true)}
             }
             ,'4.3.5.meta.favicon.48x48.exists': {
                 'selector': 'head > link[rel="icon"][sizes="48x48"]',
