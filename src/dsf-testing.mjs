@@ -8,6 +8,7 @@ import htmlReporter from 'pa11y/lib/reporters/html.js';
 //import {URL} from 'url';
 import fetch from 'node-fetch';
 import https from 'https';
+import semver from 'semver';
 
 /**
  * Can perform client side tests using puppeteer and other packages such as lighthouse and pa11y.
@@ -103,7 +104,7 @@ export class DSFTesting {
             'hasCondition' : (condition===undefined?false:true),
             'condition' : condition,
             'hasSelector' : (selector===undefined?false:true),
-            'selector' : selector,
+            'HTMLselector' : selector,
             'hasAttribute' : (attribute===undefined?false:true),
             'attribute' : attribute
         };
@@ -146,6 +147,7 @@ export class DSFTesting {
                 .thump-img{width:100px}
                 .condition-true{background-color: green;color:white;}
                 .condition-false{background-color: red;color:white;}
+                .inline-code{font-family: monospace;}
                 @media print {
                     .page-break-after {page-break-after: always;}
                   }
@@ -208,10 +210,10 @@ export class DSFTesting {
                         Value: <b>{{value}}</b><br>
                     {{/isText}}
                     {{#hasSelector}}
-                    Selector: <b>{{selector}}</b><br>
+                    Selector: <span class="inline-code">{{HTMLselector}}</span><br>
                     {{/hasSelector}}
                     {{#hasAttribute}}
-                    Attribute: <b>{{attribute}}</b><br> 
+                    Attribute: <span class="inline-code">{{attribute}}</span><br> 
                     {{/hasAttribute}}
                     {{#hasCondition}}
                     Condition: <b class="{{#condition}}condition-true{{/condition}}{{^condition}}condition-false{{/condition}}">
@@ -256,64 +258,68 @@ export class DSFTesting {
         await this.getHeadSection(pageName,'');
 
         //for all tests
-        for (const key in this.reportOptions.tests) {
+        for (const key in this.DSFTestOptions.tests) {
             let testValue = false;
-
-            //set view port (resolution)
-            if (this.reportOptions.tests[key].resize) 
-                {
-                    console.log('Resize to ' +this.reportOptions.tests[key].resize.width 
-                        + 'X ' + this.reportOptions.tests[key].resize.height);
-                    await this.page.setViewport({ width: this.reportOptions.tests[key].resize.width
-                        , height: this.reportOptions.tests[key].resize.height, deviceScaleFactor: 1, });
+            //if version is defined see if check should be run (see more on https://www.npmjs.com/package/semver)
+            if  (!(this.DSFTestOptions.tests[key].version)
+                 || (semver.satisfies(this.DSFTestOptions.currentVersion, 
+                    this.DSFTestOptions.tests[key].version))){
+                //set view port (resolution)
+                if (this.DSFTestOptions.tests[key].resize) 
+                    {
+                        console.log('Resize to ' +this.DSFTestOptions.tests[key].resize.width 
+                            + 'X ' + this.DSFTestOptions.tests[key].resize.height);
+                        await this.page.setViewport({ width: this.DSFTestOptions.tests[key].resize.width
+                            , height: this.DSFTestOptions.tests[key].resize.height, deviceScaleFactor: 1, });
+                    }
+                switch (this.DSFTestOptions.tests[key].testType) {
+                    case 'elementAttributeTest':
+                        testValue = await this.getElementAttribute(this.DSFTestOptions.tests[key].selector
+                            ,this.DSFTestOptions.tests[key].attribute)
+                        console.log(testValue);
+                        //add to report
+                        await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
+                            await this.DSFTestOptions.tests[key].condition(testValue,lang),
+                            this.DSFTestOptions.tests[key].selector
+                            ,this.DSFTestOptions.tests[key].attribute);
+                    break;
+                    case 'pageTitleTest':
+                        testValue = await this.page.title();
+                        console.log(testValue);
+                        //add to report
+                        await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
+                            await this.DSFTestOptions.tests[key].condition(testValue,lang));
+                    break;
+                    case 'countElementsTest':
+                        testValue = await this.page.$$(this.DSFTestOptions.tests[key].selector);
+                        await this.addToReportJSON(pageName,key,pageName+key,await testValue.length,
+                            await this.DSFTestOptions.tests[key].condition(testValue,lang),
+                            this.DSFTestOptions.tests[key].selector);
+                    break;
+                    case 'computedStyleTest':
+                        testValue = await await this.getComputedStyle(this.DSFTestOptions.tests[key].selector
+                            ,this.DSFTestOptions.tests[key].attribute);
+                        if (testValue) {console.log(testValue);
+                            await this.addToReportJSON(pageName,key,pageName+key,await testValue,
+                                await this.DSFTestOptions.tests[key].condition(testValue,lang),
+                                this.DSFTestOptions.tests[key].selector
+                                ,this.DSFTestOptions.tests[key].attribute);
+                        }
+                    break;
+                    case 'randomComputedStyleTest':
+                        if (isError && !this.DSFTestOptions.tests[key].onError) {break;}
+                        let hoverFlag  = (this.DSFTestOptions.tests[key].hover?true:false);
+                        let focusFlag  = (this.DSFTestOptions.tests[key].focus?true:false);
+                        testValue = await await this.getRandomComputedStyle(this.DSFTestOptions.tests[key].selector
+                            ,this.DSFTestOptions.tests[key].attribute,hoverFlag,focusFlag);
+                        if (testValue) {console.log(this.DSFTestOptions.tests[key].selector + ' ' + testValue);
+                            await this.addToReportJSON(pageName,key,pageName+key,await testValue,
+                                await this.DSFTestOptions.tests[key].condition(testValue,lang),
+                                this.DSFTestOptions.tests[key].selector
+                                ,this.DSFTestOptions.tests[key].attribute);
+                        }
+                    break;
                 }
-            switch (this.reportOptions.tests[key].testType) {
-                case 'elementAttributeTest':
-                    testValue = await this.getElementAttribute(this.reportOptions.tests[key].selector
-                        ,this.reportOptions.tests[key].attribute)
-                    console.log(testValue);
-                    //add to report
-                    await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
-                        await this.reportOptions.tests[key].condition(testValue,lang),
-                        this.reportOptions.tests[key].selector
-                        ,this.reportOptions.tests[key].attribute);
-                break;
-                case 'pageTitleTest':
-                    testValue = await this.page.title();
-                    console.log(testValue);
-                    //add to report
-                    await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
-                        await this.reportOptions.tests[key].condition(testValue,lang));
-                break;
-                case 'countElementsTest':
-                    testValue = await this.page.$$(this.reportOptions.tests[key].selector);
-                    await this.addToReportJSON(pageName,key,pageName+key,await testValue.length,
-                        await this.reportOptions.tests[key].condition(testValue,lang),
-                        this.reportOptions.tests[key].selector);
-                break;
-                case 'computedStyleTest':
-                    testValue = await await this.getComputedStyle(this.reportOptions.tests[key].selector
-                        ,this.reportOptions.tests[key].attribute);
-                    if (testValue) {console.log(testValue);
-                        await this.addToReportJSON(pageName,key,pageName+key,await testValue,
-                            await this.reportOptions.tests[key].condition(testValue,lang),
-                            this.reportOptions.tests[key].selector
-                            ,this.reportOptions.tests[key].attribute);
-                    }
-                break;
-                case 'randomComputedStyleTest':
-                    if (isError && !this.reportOptions.tests[key].onError) {break;}
-                    let hoverFlag  = (this.reportOptions.tests[key].hover?true:false);
-                    let focusFlag  = (this.reportOptions.tests[key].focus?true:false);
-                    testValue = await await this.getRandomComputedStyle(this.reportOptions.tests[key].selector
-                        ,this.reportOptions.tests[key].attribute,hoverFlag,focusFlag);
-                    if (testValue) {console.log(this.reportOptions.tests[key].selector + ' ' + testValue);
-                        await this.addToReportJSON(pageName,key,pageName+key,await testValue,
-                            await this.reportOptions.tests[key].condition(testValue,lang),
-                            this.reportOptions.tests[key].selector
-                            ,this.reportOptions.tests[key].attribute);
-                    }
-                break;
             }
         }
         
@@ -612,19 +618,25 @@ export class DSFTesting {
 
      browser = null;
 
-     /**
-      * Indicates whether to use an incognito browser contenxt
-      */
-     isIncognito = true;
+    /**
+     * Indicates whether to use an incognito browser contenxt
+     */
+    isIncognito = true;
     
     /**
      * The JSON that of the results of the tests
      */
     reportJSON = {'testName':'', 'lighthouse':false, 'pages':[]};
-    reportOptions = {
+    
+    /**
+     * The tests options to be carried out by the `DSFStandardPageTest` function
+     */
+    DSFTestOptions = {
+        'currentVersion' : '1.3.2',
         'tests' : {
             '4.3.1.viewport': {'id':'4.3.1.viewport', 
                 'selector': 'head > meta[name="viewport"]',
+                'version' : '>=1',
                 'attribute':'content',
                 'testType' : 'elementAttributeTest',
                 'onError' : false,
