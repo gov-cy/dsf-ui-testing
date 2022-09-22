@@ -21,7 +21,7 @@ This module groups some basic functions to perform client side tests using puppe
 You can use it by using the import function as follows:
 
 ```js
-import {DSFTesting} from './dsf-testing.mjs';
+import {DSFTesting} from '../modules/dsf-testing.mjs';
 ```
 
 To start using it an instance needs to be created as follows: 
@@ -68,7 +68,7 @@ A series of test are performed by the DSF to assure compliance with the design s
 
 ```js 
 
-import {DSFTesting} from './dsf-testing.mjs';
+import {DSFTesting} from '../modules/dsf-testing.mjs';
 
 (async () => {
     let DSFTest = new DSFTesting();
