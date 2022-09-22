@@ -1,4 +1,4 @@
-import {DSFTesting} from './dsf-testing.mjs';
+import {DSFTesting} from '../modules/dsf-testing.mjs';
 import Percy from '@percy/core'
 import percySnapshot from '@percy/puppeteer';
 

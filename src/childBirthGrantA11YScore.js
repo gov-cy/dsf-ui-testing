@@ -1,4 +1,4 @@
-import {DSFTesting} from './dsf-testing.mjs';
+import {DSFTesting} from '../modules/dsf-testing.mjs';
 
 (async () => {
     let DSFTest = new DSFTesting();

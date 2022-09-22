@@ -5,9 +5,10 @@ import puppeteer from 'puppeteer';
 import { startFlow } from 'lighthouse/lighthouse-core/fraggle-rock/api.js';
 import pa11y  from 'pa11y';
 import htmlReporter from 'pa11y/lib/reporters/html.js';
-import URL from 'url';
+//import {URL} from 'url';
 import fetch from 'node-fetch';
 import https from 'https';
+import semver from 'semver';
 
 /**
  * Can perform client side tests using puppeteer and other packages such as lighthouse and pa11y.
@@ -86,8 +87,10 @@ export class DSFTesting {
      * @param {string} key A key for this test
      * @param {*} value The value returned by the test 
      * @param {boolean} condition The condition to test if true or false 
+     * @param {string} selector The html selector used in the test  
+     * @param {string} attribute The attribute used in the test  
      */
-    async addToReportJSON(page,type,key,value,condition=undefined) {
+    async addToReportJSON(page,type,key,value,condition=undefined,selector=undefined,attribute=undefined) {
         let pageObj = this.reportJSON.pages.find(x => x.id === page);
         //costruct check object
         let checkObj = {
@@ -99,7 +102,11 @@ export class DSFTesting {
             'isScreenshoot' : (type=='screenshoot'?true:false),
             'isPa11y' : (type=='pa11y.issues'?true:false),
             'hasCondition' : (condition===undefined?false:true),
-            'condition' : condition
+            'condition' : condition,
+            'hasSelector' : (selector===undefined?false:true),
+            'HTMLselector' : selector,
+            'hasAttribute' : (attribute===undefined?false:true),
+            'attribute' : attribute
         };
         //console.log(checkObj);
         //add to reportJSON for this page
@@ -140,6 +147,7 @@ export class DSFTesting {
                 .thump-img{width:100px}
                 .condition-true{background-color: green;color:white;}
                 .condition-false{background-color: red;color:white;}
+                .inline-code{font-family: monospace;}
                 @media print {
                     .page-break-after {page-break-after: always;}
                   }
@@ -199,10 +207,16 @@ export class DSFTesting {
                         {{/value}}
                     {{/isPa11y}}
                     {{#isText}}
-                        Value: <b>{{value}}</b>
+                        Value: <b>{{value}}</b><br>
                     {{/isText}}
+                    {{#hasSelector}}
+                    Selector: <span class="inline-code">{{HTMLselector}}</span><br>
+                    {{/hasSelector}}
+                    {{#hasAttribute}}
+                    Attribute: <span class="inline-code">{{attribute}}</span><br> 
+                    {{/hasAttribute}}
                     {{#hasCondition}}
-                    , Condition: <b class="{{#condition}}condition-true{{/condition}}{{^condition}}condition-false{{/condition}}">
+                    Condition: <b class="{{#condition}}condition-true{{/condition}}{{^condition}}condition-false{{/condition}}">
                     {{condition}}</b>
                     {{/hasCondition}}
                 </li>
@@ -244,57 +258,68 @@ export class DSFTesting {
         await this.getHeadSection(pageName,'');
 
         //for all tests
-        for (const key in this.reportOptions.tests) {
+        for (const key in this.DSFTestOptions.tests) {
             let testValue = false;
-
-            //set view port (resolution)
-            if (this.reportOptions.tests[key].resize) 
-                {
-                    console.log('Resize to ' +this.reportOptions.tests[key].resize.width 
-                        + 'X ' + this.reportOptions.tests[key].resize.height);
-                    await this.page.setViewport({ width: this.reportOptions.tests[key].resize.width
-                        , height: this.reportOptions.tests[key].resize.height, deviceScaleFactor: 1, });
+            //if version is defined see if check should be run (see more on https://www.npmjs.com/package/semver)
+            if  (!(this.DSFTestOptions.tests[key].version)
+                 || (semver.satisfies(this.DSFTestOptions.currentVersion, 
+                    this.DSFTestOptions.tests[key].version))){
+                //set view port (resolution)
+                if (this.DSFTestOptions.tests[key].resize) 
+                    {
+                        console.log('Resize to ' +this.DSFTestOptions.tests[key].resize.width 
+                            + 'X ' + this.DSFTestOptions.tests[key].resize.height);
+                        await this.page.setViewport({ width: this.DSFTestOptions.tests[key].resize.width
+                            , height: this.DSFTestOptions.tests[key].resize.height, deviceScaleFactor: 1, });
+                    }
+                switch (this.DSFTestOptions.tests[key].testType) {
+                    case 'elementAttributeTest':
+                        testValue = await this.getElementAttribute(this.DSFTestOptions.tests[key].selector
+                            ,this.DSFTestOptions.tests[key].attribute)
+                        console.log(testValue);
+                        //add to report
+                        await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
+                            await this.DSFTestOptions.tests[key].condition(testValue,lang),
+                            this.DSFTestOptions.tests[key].selector
+                            ,this.DSFTestOptions.tests[key].attribute);
+                    break;
+                    case 'pageTitleTest':
+                        testValue = await this.page.title();
+                        console.log(testValue);
+                        //add to report
+                        await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
+                            await this.DSFTestOptions.tests[key].condition(testValue,lang));
+                    break;
+                    case 'countElementsTest':
+                        testValue = await this.page.$$(this.DSFTestOptions.tests[key].selector);
+                        await this.addToReportJSON(pageName,key,pageName+key,await testValue.length,
+                            await this.DSFTestOptions.tests[key].condition(testValue,lang),
+                            this.DSFTestOptions.tests[key].selector);
+                    break;
+                    case 'computedStyleTest':
+                        testValue = await await this.getComputedStyle(this.DSFTestOptions.tests[key].selector
+                            ,this.DSFTestOptions.tests[key].attribute);
+                        if (testValue) {console.log(testValue);
+                            await this.addToReportJSON(pageName,key,pageName+key,await testValue,
+                                await this.DSFTestOptions.tests[key].condition(testValue,lang),
+                                this.DSFTestOptions.tests[key].selector
+                                ,this.DSFTestOptions.tests[key].attribute);
+                        }
+                    break;
+                    case 'randomComputedStyleTest':
+                        if (isError && !this.DSFTestOptions.tests[key].onError) {break;}
+                        let hoverFlag  = (this.DSFTestOptions.tests[key].hover?true:false);
+                        let focusFlag  = (this.DSFTestOptions.tests[key].focus?true:false);
+                        testValue = await await this.getRandomComputedStyle(this.DSFTestOptions.tests[key].selector
+                            ,this.DSFTestOptions.tests[key].attribute,hoverFlag,focusFlag);
+                        if (testValue) {console.log(this.DSFTestOptions.tests[key].selector + ' ' + testValue);
+                            await this.addToReportJSON(pageName,key,pageName+key,await testValue,
+                                await this.DSFTestOptions.tests[key].condition(testValue,lang),
+                                this.DSFTestOptions.tests[key].selector
+                                ,this.DSFTestOptions.tests[key].attribute);
+                        }
+                    break;
                 }
-            switch (this.reportOptions.tests[key].testType) {
-                case 'elementAttributeTest':
-                    testValue = await this.getElementAttribute(this.reportOptions.tests[key].selector
-                        ,this.reportOptions.tests[key].attribute)
-                    console.log(testValue);
-                    //add to report
-                    await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
-                        await this.reportOptions.tests[key].condition(testValue,lang));
-                break;
-                case 'pageTitleTest':
-                    testValue = await this.page.title();
-                    console.log(testValue);
-                    //add to report
-                    await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
-                        await this.reportOptions.tests[key].condition(testValue,lang));
-                break;
-                case 'countElementsTest':
-                    testValue = await this.page.$$(this.reportOptions.tests[key].selector);
-                    await this.addToReportJSON(pageName,key,pageName+key,await testValue.length,
-                        await this.reportOptions.tests[key].condition(testValue,lang));
-                break;
-                case 'computedStyleTest':
-                    testValue = await await this.getComputedStyle(this.reportOptions.tests[key].selector
-                        ,this.reportOptions.tests[key].attribute);
-                    if (testValue) {console.log(testValue);
-                        await this.addToReportJSON(pageName,key,pageName+key,await testValue,
-                            await this.reportOptions.tests[key].condition(testValue,lang));
-                    }
-                break;
-                case 'randomComputedStyleTest':
-                    if (isError && !this.reportOptions.tests[key].onError) {break;}
-                    let hoverFlag  = (this.reportOptions.tests[key].hover?true:false);
-                    let focusFlag  = (this.reportOptions.tests[key].focus?true:false);
-                    testValue = await await this.getRandomComputedStyle(this.reportOptions.tests[key].selector
-                        ,this.reportOptions.tests[key].attribute,hoverFlag,focusFlag);
-                    if (testValue) {console.log(this.reportOptions.tests[key].selector + ' ' + testValue);
-                        await this.addToReportJSON(pageName,key,pageName+key,await testValue,
-                            await this.reportOptions.tests[key].condition(testValue,lang));
-                    }
-                break;
             }
         }
         
@@ -316,15 +341,18 @@ export class DSFTesting {
     /**
      * Validates a URL is reachable 
      * 
-     * @param {string} urlString 
+     * @param {string} urlString the url path
+     * @param {boolean} isRelative if the path is relative or not
      * @returns true if page is accessible or false if not
      */
-    async validateUrl(urlString) {
+    async validateUrl(urlString,isRelative=false) {
         try {
             const agent = new https.Agent({
                 rejectUnauthorized: false
               })
-            const response = await fetch(urlString, { agent });
+            const urlPath = (isRelative?new URL(urlString, this.page.url()).href:urlString);
+            //console.log('---------' + urlPath);
+            const response = await fetch(urlPath, { agent });
             //console.log('status code: ', response.status); // 👉️ 200
             if (!response.ok) {return false} else {return true;}
         } catch (err) {console.log(err.message);return false;}
@@ -590,19 +618,25 @@ export class DSFTesting {
 
      browser = null;
 
-     /**
-      * Indicates whether to use an incognito browser contenxt
-      */
-     isIncognito = true;
+    /**
+     * Indicates whether to use an incognito browser contenxt
+     */
+    isIncognito = true;
     
     /**
      * The JSON that of the results of the tests
      */
     reportJSON = {'testName':'', 'lighthouse':false, 'pages':[]};
-    reportOptions = {
+    
+    /**
+     * The tests options to be carried out by the `DSFStandardPageTest` function
+     */
+    DSFTestOptions = {
+        'currentVersion' : '1.3.2',
         'tests' : {
             '4.3.1.viewport': {'id':'4.3.1.viewport', 
                 'selector': 'head > meta[name="viewport"]',
+                'version' : '>=1',
                 'attribute':'content',
                 'testType' : 'elementAttributeTest',
                 'onError' : false,
@@ -745,14 +779,14 @@ export class DSFTesting {
                 'attribute':'content',
                 'testType' : 'elementAttributeTest',
                 'onError' : false,
-                'condition':async (value,lang) => {return await this.validateUrl(value)}
+                'condition':async (value,lang) => {return await this.validateUrl(value,true)}
             }
             ,'4.3.5.meta.twitter:image.exists': {
                 'selector': 'head > meta[property="twitter:image"]',
                 'attribute':'content',
                 'testType' : 'elementAttributeTest',
                 'onError' : false,
-                'condition':async (value,lang) => {return await this.validateUrl(value)}
+                'condition':async (value,lang) => {return await this.validateUrl(value,true)}
             }
             ,'4.3.5.meta.favicon.48x48.exists': {
                 'selector': 'head > link[rel="icon"][sizes="48x48"]',
