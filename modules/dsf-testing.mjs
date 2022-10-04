@@ -60,6 +60,34 @@ export class DSFTesting {
         //close browser
         this.browser.close();
     }
+
+    /**
+         * Display Page - Action on Console
+         */
+    async ConsoleEcho(pageName, actionDesc="") {
+        if (actionDesc=='')
+        {
+            console.log('***** \'' + pageName + '\' Goto '
+                + (await this.RepeatStr((80-pageName.length-6),'*')).toString())
+        }
+        else
+        {
+            console.log('***** \'' + pageName + '\' Action:' + actionDesc 
+                + (await this.RepeatStr((80-pageName.length-8-actionDesc.length),'*')).toString())
+        }
+        
+    }
+
+    async RepeatStr(count, pattern) {
+        if (count < 1) return '';
+        var result = '', i = 0;
+        while (i < count) {
+          result = result.concat(pattern);
+          i=i+1;
+        }
+        return result;
+      };
+
     /**
      * Wait for some time (in miliseconds) before you execure the next thing
      * 
@@ -141,8 +169,9 @@ export class DSFTesting {
      * @param {string} lang Lang expected in html element  
      * @param {boolean} isError If the page has errors or not  
      */
+
     async DSFStandardPageTest(pageName, lang, isError) {
-        console.log('********** '+pageName+' page ***');
+        console.log('Check \'' + pageName.toString() +'\' page ');
         //await before run
         await DSFTesting.timeout(5000);
         //set view port (resolution)
@@ -166,8 +195,9 @@ export class DSFTesting {
                 //set view port (resolution)
                 if (this.DSFTestOptions.tests[key].resize) 
                     {
-                        console.log('Resize to ' +this.DSFTestOptions.tests[key].resize.width 
-                            + 'X ' + this.DSFTestOptions.tests[key].resize.height);
+                        console.log('Test Resize to ' +this.DSFTestOptions.tests[key].resize.width 
+                            + ' X ' + this.DSFTestOptions.tests[key].resize.height);
+
                         await this.page.setViewport({ width: this.DSFTestOptions.tests[key].resize.width
                             , height: this.DSFTestOptions.tests[key].resize.height, deviceScaleFactor: 1, });
                     }
@@ -175,7 +205,10 @@ export class DSFTesting {
                     case 'elementAttributeTest':
                         testValue = await this.getElementAttribute(this.DSFTestOptions.tests[key].selector
                             ,this.DSFTestOptions.tests[key].attribute)
-                        console.log(testValue);
+
+                        console.log('Test [elementAttributeTest]: ' 
+                                + this.DSFTestOptions.tests[key].selector + ' = ' + testValue);
+
                         //add to report
                         await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
                             await this.DSFTestOptions.tests[key].condition(testValue,lang),
@@ -184,13 +217,18 @@ export class DSFTesting {
                     break;
                     case 'pageTitleTest':
                         testValue = await this.page.title();
-                        console.log(testValue);
+
+                        console.log('Test [pageTitleTest]: ' + testValue);
+
                         //add to report
                         await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
                             await this.DSFTestOptions.tests[key].condition(testValue,lang));
                     break;
                     case 'countElementsTest':
                         testValue = await this.page.$$(this.DSFTestOptions.tests[key].selector);
+
+                        console.log('Test [countElementsTest]: ' + testValue);
+
                         await this.addToReportJSON(pageName,key,pageName+key,await testValue.length,
                             await this.DSFTestOptions.tests[key].condition(testValue,lang),
                             this.DSFTestOptions.tests[key].selector);
@@ -198,7 +236,10 @@ export class DSFTesting {
                     case 'computedStyleTest':
                         testValue = await await this.getComputedStyle(this.DSFTestOptions.tests[key].selector
                             ,this.DSFTestOptions.tests[key].attribute);
-                        if (testValue) {console.log(testValue);
+
+                        //console.log('Test [computedStyleTest]: ' + testValue);
+
+                        if (testValue) {console.log('Test [computedStyleTest]: ' + testValue);
                             await this.addToReportJSON(pageName,key,pageName+key,await testValue,
                                 await this.DSFTestOptions.tests[key].condition(testValue,lang),
                                 this.DSFTestOptions.tests[key].selector
@@ -211,7 +252,10 @@ export class DSFTesting {
                         let focusFlag  = (this.DSFTestOptions.tests[key].focus?true:false);
                         testValue = await await this.getRandomComputedStyle(this.DSFTestOptions.tests[key].selector
                             ,this.DSFTestOptions.tests[key].attribute,hoverFlag,focusFlag);
-                        if (testValue) {console.log(this.DSFTestOptions.tests[key].selector + ' ' + testValue);
+
+                        //console.log('Test [randomComputedStyleTest]: ' + testValue);
+
+                        if (testValue) {console.log('Test [randomComputedStyleTest]: ' + this.DSFTestOptions.tests[key].selector + ' = ' + testValue);
                             await this.addToReportJSON(pageName,key,pageName+key,await testValue,
                                 await this.DSFTestOptions.tests[key].condition(testValue,lang),
                                 this.DSFTestOptions.tests[key].selector
@@ -232,9 +276,12 @@ export class DSFTesting {
         //sometimes needed to reach the element and click it (bigger height)
         await this.page.setViewport({ width: 1200, height: 3000, deviceScaleFactor: 1, });
         console.log(this.reportJSON);
+       
         //create new report every time (if run fails at any point, a report is generated up to that point)
         await this.generateReport();
-        console.log('OK');
+
+        //console.log('OK');
+        console.log('Check \'' + pageName.toString() +'\' page - DONE');
     }
 
     /**
@@ -253,8 +300,19 @@ export class DSFTesting {
             //console.log('---------' + urlPath);
             const response = await fetch(urlPath, { agent });
             //console.log('status code: ', response.status); // 👉️ 200
-            if (!response.ok) {return false} else {return true;}
-        } catch (err) {console.log(err.message);return false;}
+            if (!response.ok) 
+            {
+                console.log('.....[validateUrl]: Response NOT OK');
+                return false
+            } 
+            else 
+            {
+                console.log('.....[validateUrl]: Response OK');
+                return true;
+            }
+          
+
+        } catch (err) {console.log('Error.[validateUrl]: ' + err.message);return false;}
       } 
     /**
      * Takes a screenshoot
@@ -422,16 +480,17 @@ export class DSFTesting {
     async getRandomComputedStyle(selector,property, hover=false, focus=false) {
         //get all elements with selector
         let elements = await this.page.$$(selector);
-        console.log(elements.length);
+        console.log('---- ' + selector + '.' + property + ' = ' + elements.length);
         if (elements.length > 0) {
             //get random selector
             let randomSelector = await ((Math.floor( Math.random() * elements.length)));
-            console.log(randomSelector);
+           //console.log(randomSelector);
+            console.log('---- (rnd) ' + randomSelector + '.' + property + ' = ' + elements.length);
             try {
-                if (hover) {await elements[randomSelector].hover();console.log('Hover'); }
-                if (focus) {await elements[randomSelector].focus();console.log('Focus'); }
+                if (hover) {await elements[randomSelector].hover();console.log('---- Hover'); }
+                if (focus) {await elements[randomSelector].focus();console.log('---- Focus'); }
             } catch(e){
-                console.log(e.message);
+                console.log('Error [getRandomComputedStyle]: ' +  e.message);
                 return false;
             }
             
