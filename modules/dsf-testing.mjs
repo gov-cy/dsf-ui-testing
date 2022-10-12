@@ -19,6 +19,11 @@ import {DSFReportTemplate} from './dsf-report-template.mjs';
 export class DSFTesting {
 
     /**
+     * Use this flag to skip testing
+     */
+    skipLog = false;
+
+    /**
      * Start the tests with this function. Will create instances for puppeteer page and lighthouse
      * 
      * @param {string} testName the name of the test  
@@ -195,8 +200,9 @@ export class DSFTesting {
                 //set view port (resolution)
                 if (this.DSFTestOptions.tests[key].resize) 
                     {
-                        console.log('Test Resize to ' +this.DSFTestOptions.tests[key].resize.width 
-                            + ' X ' + this.DSFTestOptions.tests[key].resize.height);
+                        if (this.skipLog==false)
+                            {console.log('Test Resize to ' +this.DSFTestOptions.tests[key].resize.width 
+                                + ' X ' + this.DSFTestOptions.tests[key].resize.height);}
 
                         await this.page.setViewport({ width: this.DSFTestOptions.tests[key].resize.width
                             , height: this.DSFTestOptions.tests[key].resize.height, deviceScaleFactor: 1, });
@@ -206,8 +212,9 @@ export class DSFTesting {
                         testValue = await this.getElementAttribute(this.DSFTestOptions.tests[key].selector
                             ,this.DSFTestOptions.tests[key].attribute)
 
-                        console.log('Test [elementAttributeTest]: ' 
-                                + this.DSFTestOptions.tests[key].selector + ' = ' + testValue);
+                        if (this.skipLog==false)
+                            {console.log('Test [elementAttributeTest]: ' 
+                                + this.DSFTestOptions.tests[key].selector + ' = ' + testValue);}
 
                         //add to report
                         await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
@@ -218,7 +225,8 @@ export class DSFTesting {
                     case 'pageTitleTest':
                         testValue = await this.page.title();
 
-                        console.log('Test [pageTitleTest]: ' + testValue);
+                        if (this.skipLog==false)
+                            {console.log('Test [pageTitleTest]: ' + testValue);}
 
                         //add to report
                         await this.addToReportJSON(pageName,key,pageName+'.'+ key,testValue, 
@@ -227,7 +235,8 @@ export class DSFTesting {
                     case 'countElementsTest':
                         testValue = await this.page.$$(this.DSFTestOptions.tests[key].selector);
 
-                        console.log('Test [countElementsTest]: ' + testValue);
+                        if (this.skipLog==false)
+                            {console.log('Test [countElementsTest]: ' + testValue);}
 
                         await this.addToReportJSON(pageName,key,pageName+key,await testValue.length,
                             await this.DSFTestOptions.tests[key].condition(testValue,lang),
@@ -239,7 +248,7 @@ export class DSFTesting {
 
                         //console.log('Test [computedStyleTest]: ' + testValue);
 
-                        if (testValue) {console.log('Test [computedStyleTest]: ' + testValue);
+                        if((testValue) && (this.skipLog==false)) {console.log('Test [computedStyleTest]: ' + testValue);
                             await this.addToReportJSON(pageName,key,pageName+key,await testValue,
                                 await this.DSFTestOptions.tests[key].condition(testValue,lang),
                                 this.DSFTestOptions.tests[key].selector
@@ -255,7 +264,12 @@ export class DSFTesting {
 
                         //console.log('Test [randomComputedStyleTest]: ' + testValue);
 
-                        if (testValue) {console.log('Test [randomComputedStyleTest]: ' + this.DSFTestOptions.tests[key].selector + ' = ' + testValue);
+                        if (testValue)  
+                        {   if (this.skipLog==false)
+                            {
+                                console.log('Test [randomComputedStyleTest]: ' + this.DSFTestOptions.tests[key].selector + ' = ' + testValue);
+                            }
+                            
                             await this.addToReportJSON(pageName,key,pageName+key,await testValue,
                                 await this.DSFTestOptions.tests[key].condition(testValue,lang),
                                 this.DSFTestOptions.tests[key].selector
@@ -264,7 +278,7 @@ export class DSFTesting {
                     break;
                 }
             }
-        }
+        }        
         
         //---- pa11y report ----
         await this.doPa11y(pageName,'');
@@ -302,12 +316,14 @@ export class DSFTesting {
             //console.log('status code: ', response.status); // 👉️ 200
             if (!response.ok) 
             {
-                console.log('.....[validateUrl]: Response NOT OK');
+                if (this.skipLog==false)
+                            {console.log('.....[validateUrl]: Response NOT OK');}
                 return false
             } 
             else 
             {
-                console.log('.....[validateUrl]: Response OK');
+                if (this.skipLog==false)
+                            {console.log('.....[validateUrl]: Response OK');}
                 return true;
             }
           
@@ -480,15 +496,27 @@ export class DSFTesting {
     async getRandomComputedStyle(selector,property, hover=false, focus=false) {
         //get all elements with selector
         let elements = await this.page.$$(selector);
-        console.log('---- ' + selector + '.' + property + ' = ' + elements.length);
+        
+        if (this.skipLog==false)
+        {
+            console.log('---- ' + selector + '.' + property + ' = ' + elements.length);
+        }
+        
         if (elements.length > 0) {
             //get random selector
             let randomSelector = await ((Math.floor( Math.random() * elements.length)));
            //console.log(randomSelector);
+
+           if (this.skipLog==false) 
+           {
             console.log('---- (rnd) ' + randomSelector + '.' + property + ' = ' + elements.length);
+           }
+            
             try {
-                if (hover) {await elements[randomSelector].hover();console.log('---- Hover'); }
-                if (focus) {await elements[randomSelector].focus();console.log('---- Focus'); }
+                if (hover) {await elements[randomSelector].hover();
+                    if (this.skipLog==false) {console.log('---- Hover');} }
+                if (focus) {await elements[randomSelector].focus();
+                    if (this.skipLog==false) {console.log('---- Focus');} }
             } catch(e){
                 console.log('Error [getRandomComputedStyle]: ' +  e.message);
                 return false;
