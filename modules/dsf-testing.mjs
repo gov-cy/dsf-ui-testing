@@ -590,6 +590,7 @@ export class DSFTesting {
      */
     pa11ySettings = {
         standard: 'WCAG2AA'
+        ,ignoreUrl: true
         ,wait: 10000
     };
     /**
