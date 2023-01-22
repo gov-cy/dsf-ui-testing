@@ -308,7 +308,7 @@ export class DSFTesting {
     async validateUrl(urlString,isRelative=false) {
         try {
             const agent = new https.Agent({
-                rejectUnauthorized: false
+                rejectUnauthorized: true
               })
             const urlPath = (isRelative?new URL(urlString, this.page.url()).href:urlString);
             //console.log('---------' + urlPath);
