@@ -9,6 +9,7 @@
   "scripts": {},
   "keywords": [],
   "dependencies": {
+    "@gov-cy/govcy-frontend-tester": "^1.0.2",
     "@percy/cli": "^1.1.0",
     "@percy/core": "^1.1.0",
     "@percy/puppeteer": "^2.0.1",
