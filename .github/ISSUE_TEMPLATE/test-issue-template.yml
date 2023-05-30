@@ -42,13 +42,6 @@ body:
       description: Which user did you use when the issue occurred.
     validations:
       required: false
-  - type: input
-    id: urls
-    attributes:
-      label: URLs
-      description: Enter the URL (or URLs) of the page the issue has happened.
-    validations:
-      required: false
   - type: dropdown
     id: browsers
     attributes:
@@ -71,11 +64,4 @@ body:
       label: Enter any other notes if needed.
     validations:
       required: false
-  - type: checkboxes
-    id: terms
-    attributes:
-      label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://example.com)
-      options:
-        - label: I agree to follow this project's Code of Conduct
-          required: true
+    
