@@ -1,41 +1,54 @@
-name: Bug Report
-description: File a bug report
-title: "[Bug]: "
-labels: ["bug", "triage"]
-assignees:
-  - octocat
+name: DSF Issue
+description: File an issue or a bug.
+title: "[Issue]: "
+labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!
-  - type: input
-    id: contact
-    attributes:
-      label: Contact Details
-      description: How can we get in touch with you if we need more info?
-      placeholder: ex. email@example.com
-    validations:
-      required: false
+        Try to describe the issue as best as possible by filling out this form.
   - type: textarea
-    id: what-happened
+    id: description
     attributes:
       label: What happened?
-      description: Also tell us, what did you expect to happen?
-      placeholder: Tell us what you see!
-      value: "A bug happened!"
+      description: Describe what happen happen? What steps did you follow to produce this error/issue?
     validations:
       required: true
-  - type: dropdown
-    id: version
+  - type: textarea
+    id: expected-outcome
     attributes:
-      label: Version
-      description: What version of our software are you running?
-      options:
-        - 1.0.2 (Default)
-        - 1.0.3 (Edge)
+      label: Expected outcome?
+      description: Describe the expected outcome (if any)
     validations:
-      required: true
+      required: false
+  - type: input
+    id: scenario
+    attributes:
+      label: Scenario
+      description: Did this issue occur during a specific test scenario? If yes please specify the scenario reference number.
+    validations:
+      required: false
+  - type: input
+    id: urls
+    attributes:
+      label: URLs
+      description: Enter the URL (or URLs) of the page the issue has occurred.
+    validations:
+      required: false
+  - type: input
+    id: test-user
+    attributes:
+      label: Test user
+      description: Which user did you use when the issue occurred.
+    validations:
+      required: false
+  - type: input
+    id: urls
+    attributes:
+      label: URLs
+      description: Enter the URL (or URLs) of the page the issue has happened.
+    validations:
+      required: false
   - type: dropdown
     id: browsers
     attributes:
@@ -52,6 +65,12 @@ body:
       label: Relevant log output
       description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
       render: shell
+  - type: textarea
+    id: notes
+    attributes:
+      label: Enter any other notes if needed.
+    validations:
+      required: false
   - type: checkboxes
     id: terms
     attributes:
