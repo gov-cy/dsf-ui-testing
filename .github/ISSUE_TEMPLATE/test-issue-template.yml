@@ -1,7 +1,5 @@
 name: DSF Issue
 description: File an issue or a bug.
-title: "[Issue]: "
-labels: ["bug"]
 body:
   - type: markdown
     attributes:
