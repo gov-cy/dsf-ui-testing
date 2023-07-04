@@ -9,7 +9,7 @@ body:
     id: description
     attributes:
       label: What happened?
-      description: Describe what happen happen? What steps did you follow to produce this error/issue?
+      description: Describe what happened? What steps did you follow to produce this error/issue?
     validations:
       required: true
   - type: textarea
