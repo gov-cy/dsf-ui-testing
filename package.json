@@ -21,6 +21,20 @@
     "pa11y": "^6.2.3",
     "puppeteer": "^13.5.2",
     "readline-sync": "^1.4.10",
-    "semver": "^7.3.7"
+    "semver": ">=7.3.7"
+  }
+  ,
+  "overrides": {
+      "pa11y" : {
+        "semver": ">=7.3.7"
+      },
+      "lighthouse": {
+          "semver": ">=7.3.7",
+          "configstore": {
+            "make-dir": {
+              "semver": ">=7.3.7"
+            }
+          }
+      }
   }
 }
