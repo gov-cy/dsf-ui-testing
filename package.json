@@ -18,23 +18,12 @@
     "mustache": "^4.2.0",
     "node-fetch": "^3.2.10",
     "open": "^8.4.0",
-    "pa11y": "^6.2.3",
+    "pa11y": "^8.0.0",
     "puppeteer": "^13.5.2",
     "readline-sync": "^1.4.10",
     "semver": ">=7.3.7"
-  }
-  ,
+  },
   "overrides": {
-      "pa11y" : {
-        "semver": ">=7.3.7"
-      },
-      "lighthouse": {
-          "semver": ">=7.3.7",
-          "configstore": {
-            "make-dir": {
-              "semver": ">=7.3.7"
-            }
-          }
-      }
+    "ws": ">=8.17.1"
   }
 }
