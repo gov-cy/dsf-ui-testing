@@ -1,6 +1,6 @@
 {
   "name": "dsf-ui-testing.git",
-  "version": "2.0.7",
+  "version": "2.1.0",
   "description": "",
   "main": "index.js",
   "author": "DMRID - DSF Team",
@@ -9,17 +9,17 @@
   "scripts": {},
   "keywords": [],
   "dependencies": {
-    "@gov-cy/govcy-frontend-tester": "^1.0.2",
+    "@gov-cy/govcy-frontend-tester": "^1.2.1",
     "@percy/cli": "^1.1.0",
     "@percy/core": "^1.1.0",
     "@percy/puppeteer": "^2.0.1",
     "chai": "^4.3.6",
-    "lighthouse": "^9.5.0",
+    "lighthouse": "^12.2.2",
     "mustache": "^4.2.0",
     "node-fetch": "^3.2.10",
     "open": "^8.4.0",
     "pa11y": "^8.0.0",
-    "puppeteer": "^13.5.2",
+    "puppeteer": "^24.6.1",
     "readline-sync": "^1.4.10",
     "semver": ">=7.3.7"
   },
